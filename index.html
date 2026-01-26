@@ -1,0 +1,228 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Январь 2026 — Трекер выживания</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+}
+
+h1 {
+  margin-bottom: 10px;
+}
+
+.progress {
+  background: #161b22;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.progress-bar {
+  height: 20px;
+  background: #2ea043;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+.progress-text {
+  margin: 5px 0 20px;
+}
+
+/* ===== Календарь ===== */
+
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.day {
+  width: 100%;
+  padding-top: 100%;
+  position: relative;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #161b22;
+}
+
+.day.empty {
+  background: transparent;
+  cursor: default;
+}
+
+.day[data-state="1"] { background: #2ea043; }
+.day[data-state="2"] { background: #13491e; }
+
+.day span {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ===== Заметки ===== */
+
+.notes {
+  background: #161b22;
+  padding: 15px;
+  border-radius: 6px;
+}
+
+.notes textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: none;
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  outline: none;
+  overflow: hidden;
+}
+
+.notes textarea::placeholder {
+  color: #8b949e;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Январь 2026</h1>
+
+<div class="progress">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+<div class="progress-text" id="progressText"></div>
+
+<div class="weekdays">
+  <div>Пн</div><div>Вт</div><div>Ср</div>
+  <div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+</div>
+
+<div class="calendar" id="calendar"></div>
+
+<div class="notes">
+  <textarea id="notes" placeholder="Заметки, мысли, итоги месяца…"></textarea>
+</div>
+
+</div>
+
+<script>
+const year = 2026;
+const month = 0; // январь (0-based)
+const daysInMonth = 31;
+
+const calendar = document.getElementById("calendar");
+const progressBar = document.getElementById("progressBar");
+const progressText = document.getElementById("progressText");
+
+let data = JSON.parse(localStorage.getItem("jan2026")) || {};
+
+/* ===== Прогресс ===== */
+
+function save() {
+  localStorage.setItem("jan2026", JSON.stringify(data));
+  updateProgress();
+}
+
+function updateProgress() {
+  const completed = Object.values(data).filter(v => v > 0).length;
+  const percent = Math.round((completed / daysInMonth) * 100);
+  progressBar.style.width = percent + "%";
+  progressText.textContent =
+    `Минимум выполнен: ${completed} / ${daysInMonth} дней (${percent}%)`;
+}
+
+/* ===== Генерация календаря ===== */
+
+// День недели 1 января (Пн = 0)
+const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+
+// Пустые ячейки до первого дня
+for (let i = 0; i < firstDay; i++) {
+  const empty = document.createElement("div");
+  empty.className = "day empty";
+  calendar.appendChild(empty);
+}
+
+// Дни месяца
+for (let i = 1; i <= daysInMonth; i++) {
+  const day = document.createElement("div");
+  day.className = "day";
+  day.dataset.day = i;
+  day.dataset.state = data[i] || 0;
+
+  const label = document.createElement("span");
+  label.textContent = i;
+  day.appendChild(label);
+
+  day.onclick = () => {
+    let state = Number(day.dataset.state);
+    state = (state + 1) % 3;
+    day.dataset.state = state;
+    data[i] = state;
+    save();
+  };
+
+  calendar.appendChild(day);
+}
+
+updateProgress();
+
+/* ===== Заметки (фикс Enter-рывка) ===== */
+
+const notes = document.getElementById("notes");
+notes.value = localStorage.getItem("jan2026_notes") || "";
+
+function autoResize() {
+  const scrollY = window.scrollY; // сохраняем позицию скролла
+
+  notes.style.height = "auto";
+  notes.style.height = notes.scrollHeight + "px";
+
+  window.scrollTo(0, scrollY); // возвращаем обратно
+}
+
+notes.addEventListener("input", () => {
+  localStorage.setItem("jan2026_notes", notes.value);
+  autoResize();
+});
+
+// первичная подгонка высоты
+autoResize();
+</script>
+
+</body>
+</html>
+```
