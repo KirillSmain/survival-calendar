@@ -171,6 +171,175 @@ button:hover { filter: brightness(1.1); }
   opacity: 0.75;
 }
 
+.day-note-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.25);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,0.15);
+  cursor: pointer;
+  opacity: 0.85;
+}
+.day-note-btn:hover { opacity: 1; filter: brightness(1.15); }
+.day.has-tasks .day-note-btn { background: rgba(46,160,67,0.3); }
+
+.day-theme {
+  position: absolute;
+  bottom: 5px;
+  left: 6px;
+  right: 22px;
+  font-size: 9px;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* ===== Modal: день — заметки ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal-day {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+}
+
+.modal-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-day-title { margin: 0; font-size: 16px; }
+.modal-day-close {
+  padding: 6px 10px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.modal-day-body { padding: 16px; }
+
+.timeline-wrap {
+  margin-bottom: 16px;
+  background: var(--bg);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.timeline-title { font-size: 12px; opacity: 0.8; margin: 0 0 8px 0; }
+.timeline {
+  height: 120px;
+  position: relative;
+  display: flex;
+}
+.timeline-hours {
+  width: 36px;
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text);
+  opacity: 0.6;
+  padding-top: 2px;
+}
+.timeline-hours span { display: block; height: 7.06px; }
+.timeline-track {
+  flex: 1;
+  position: relative;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 6px,
+    rgba(48,54,61,0.25) 6px,
+    rgba(48,54,61,0.25) 7px
+  );
+}
+.timeline-block {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border-radius: 4px;
+  background: var(--green);
+  opacity: 0.85;
+  font-size: 10px;
+  padding: 2px 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.tasks-title { font-size: 12px; opacity: 0.8; margin: 0 0 10px 0; }
+.task-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.task-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.task-row:last-child { margin-bottom: 0; }
+.task-time { display: flex; gap: 4px; align-items: center; }
+.task-time input {
+  width: 70px;
+  padding: 6px 8px;
+  font-size: 13px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.task-theme { flex: 1; min-width: 120px; }
+.task-theme input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.task-desc textarea {
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: inherit;
+}
+.task-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.task-delete { font-size: 12px; opacity: 0.7; padding: 4px 8px; }
+.add-task-btn { width: 100%; margin-top: 6px; padding: 10px; }
+
 /* ===== Notes ===== */
 .notes {
   background: var(--panel);
@@ -247,7 +416,7 @@ button:hover { filter: brightness(1.1); }
         </div>
 
         <div class="small">
-          Состояния дня: 0 → 1 → 2 → 0 (клик по дню).<br/>
+          Состояния дня: 0 → 1 → 2 → 0 (клик по дню). ⋯ на квадратике — заметки и задачи дня.<br/>
           Экспорт/импорт — перенос между устройствами без логина.
         </div>
       </div>
@@ -262,6 +431,28 @@ button:hover { filter: brightness(1.1); }
     </aside>
   </div>
 
+</div>
+
+<!-- Modal: заметки дня -->
+<div class="modal-overlay" id="dayModal">
+  <div class="modal-day">
+    <div class="modal-day-header">
+      <h2 class="modal-day-title" id="dayModalTitle"></h2>
+      <button type="button" class="modal-day-close" id="dayModalClose" aria-label="Закрыть">×</button>
+    </div>
+    <div class="modal-day-body">
+      <div class="timeline-wrap">
+        <p class="timeline-title">Время</p>
+        <div class="timeline">
+          <div class="timeline-hours" id="timelineHours"></div>
+          <div class="timeline-track" id="timelineTrack"></div>
+        </div>
+      </div>
+      <p class="tasks-title">Задачи</p>
+      <div id="dayTasksContainer"></div>
+      <button type="button" class="add-task-btn" id="addTaskBtn">+ Добавить задачу</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -284,10 +475,22 @@ function ymKey(y, m) {
 
 function loadMonthData(y, m) {
   const raw = localStorage.getItem(ymKey(y, m));
-  return raw ? JSON.parse(raw) : { days: {}, notes: "" };
+  const base = { days: {}, notes: "", dayTasks: {} };
+  if (!raw) return base;
+  const parsed = JSON.parse(raw);
+  return { ...base, ...parsed, dayTasks: parsed.dayTasks || {} };
 }
 function saveMonthData(y, m, payload) {
   localStorage.setItem(ymKey(y, m), JSON.stringify(payload));
+}
+
+function dateLabel(y, m, d) {
+  const months = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  return `${d} ${months[m]} ${y}`;
+}
+
+function escapeAttr(s) {
+  return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /** ===== DOM ===== **/
@@ -381,7 +584,28 @@ function render() {
     label.textContent = d;
     day.appendChild(label);
 
-    day.onclick = () => {
+    const tasks = monthPayload.dayTasks[d] || [];
+    if (tasks.length > 0) day.classList.add("has-tasks");
+
+    const themeSpan = document.createElement("span");
+    themeSpan.className = "day-theme";
+    if (tasks.length === 1 && tasks[0].theme) themeSpan.textContent = tasks[0].theme;
+    else if (tasks.length > 1) themeSpan.textContent = `• ${tasks.length}`;
+    day.appendChild(themeSpan);
+
+    const noteBtn = document.createElement("button");
+    noteBtn.type = "button";
+    noteBtn.className = "day-note-btn";
+    noteBtn.title = "Заметки дня";
+    noteBtn.textContent = "⋯";
+    noteBtn.onclick = (e) => {
+      e.stopPropagation();
+      openDayModal(current.year, current.month, d);
+    };
+    day.appendChild(noteBtn);
+
+    day.onclick = (e) => {
+      if (e.target.closest(".day-note-btn")) return;
       let state = Number(day.dataset.state);
       state = (state + 1) % 3;
       day.dataset.state = state;
@@ -465,6 +689,135 @@ importFile.addEventListener("change", async () => {
     importFile.value = "";
   }
 });
+
+/** ===== Modal заметок дня ===== **/
+const dayModal = document.getElementById("dayModal");
+const dayModalTitle = document.getElementById("dayModalTitle");
+const dayModalClose = document.getElementById("dayModalClose");
+const timelineHours = document.getElementById("timelineHours");
+const timelineTrack = document.getElementById("timelineTrack");
+const dayTasksContainer = document.getElementById("dayTasksContainer");
+const addTaskBtn = document.getElementById("addTaskBtn");
+
+let modalDay = { year: 0, month: 0, day: 0 };
+
+function openDayModal(y, m, d) {
+  modalDay = { year: y, month: m, day: d };
+  monthPayload = loadMonthData(y, m);
+  dayModalTitle.textContent = dateLabel(y, m, d);
+  renderTimeline();
+  renderDayTasks();
+  dayModal.classList.add("open");
+}
+
+function closeDayModal() {
+  dayModal.classList.remove("open");
+  render();
+}
+
+dayModalClose.onclick = closeDayModal;
+dayModal.addEventListener("click", (e) => {
+  if (e.target === dayModal) closeDayModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && dayModal.classList.contains("open")) closeDayModal();
+});
+
+function getDayTasks() {
+  const list = monthPayload.dayTasks[modalDay.day] || [];
+  return Array.isArray(list) ? list : [];
+}
+
+function setDayTasks(list) {
+  monthPayload.dayTasks[modalDay.day] = list;
+  saveMonthData(modalDay.year, modalDay.month, monthPayload);
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const H_START = 6, H_END = 22;
+  timelineHours.innerHTML = "";
+  for (let h = H_START; h <= H_END; h++) {
+    const sp = document.createElement("span");
+    sp.textContent = `${String(h).padStart(2, "0")}:00`;
+    timelineHours.appendChild(sp);
+  }
+  const totalMin = (H_END - H_START + 1) * 60;
+  const tasks = getDayTasks().filter(t => t.startTime && t.endTime);
+  timelineTrack.innerHTML = "";
+  for (const t of tasks) {
+    const parse = (s) => {
+      const [h, m] = (s || "0:00").split(":").map(x => parseInt(x, 10) || 0);
+      return h * 60 + m;
+    };
+    const startMin = parse(t.startTime) - H_START * 60;
+    const endMin = parse(t.endTime) - H_START * 60;
+    const duration = Math.max(0, endMin - startMin);
+    const top = Math.max(0, (startMin / totalMin) * 100);
+    const height = Math.min(100 - top, (duration / totalMin) * 100);
+    const block = document.createElement("div");
+    block.className = "timeline-block";
+    block.style.top = top + "%";
+    block.style.height = height + "%";
+    block.textContent = t.theme || "—";
+    block.title = t.description || "";
+    timelineTrack.appendChild(block);
+  }
+}
+
+function renderDayTasks() {
+  const tasks = getDayTasks();
+  dayTasksContainer.innerHTML = "";
+  tasks.forEach((t, i) => {
+    const card = document.createElement("div");
+    card.className = "task-card";
+    card.innerHTML = `
+      <div class="task-row">
+        <div class="task-time">
+          <input type="time" value="${escapeAttr(t.startTime)}" data-i="${i}" data-field="startTime" placeholder="Начало" />
+          <input type="time" value="${escapeAttr(t.endTime)}" data-i="${i}" data-field="endTime" placeholder="Конец" />
+        </div>
+        <div class="task-theme">
+          <input type="text" value="${escapeAttr(t.theme)}" data-i="${i}" data-field="theme" placeholder="Тема (отображается на дне)" />
+        </div>
+      </div>
+      <div class="task-desc">
+        <textarea data-i="${i}" data-field="description" placeholder="Описание задачи">${escapeAttr(t.description)}</textarea>
+      </div>
+      <div class="task-actions">
+        <button type="button" class="task-delete" data-i="${i}">Удалить</button>
+      </div>
+    `;
+    dayTasksContainer.appendChild(card);
+  });
+  dayTasksContainer.querySelectorAll("input, textarea").forEach(el => {
+    el.addEventListener("input", applyTaskEdit);
+    el.addEventListener("change", applyTaskEdit);
+  });
+  dayTasksContainer.querySelectorAll(".task-delete").forEach(btn => {
+    btn.onclick = () => {
+      const list = getDayTasks().filter((_, i) => i !== Number(btn.dataset.i));
+      setDayTasks(list);
+      renderDayTasks();
+    };
+  });
+}
+
+function applyTaskEdit() {
+  const el = this;
+  const i = Number(el.dataset.i);
+  const field = el.dataset.field;
+  const list = getDayTasks();
+  if (!list[i]) return;
+  list[i][field] = el.value.trim();
+  setDayTasks(list);
+}
+
+addTaskBtn.onclick = () => {
+  const list = getDayTasks().concat([{ theme: "", description: "", startTime: "", endTime: "" }]);
+  setDayTasks(list);
+  renderDayTasks();
+};
 
 /** старт **/
 renderMonthSidebar(); // рисуем “месяцы” один раз
