@@ -1,106 +1,191 @@
-```html
+<!-- sidebar months enabled -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
-<title>Январь 2026 — Трекер выживания</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Трекер выживания — календарь</title>
 
 <style>
+:root{
+  --bg:#0d1117;
+  --panel:#161b22;
+  --text:#c9d1d9;
+  --border:#30363d;
+  --green:#2ea043;
+  --green2:#13491e;
+}
+
 body {
   font-family: Arial, sans-serif;
-  background: #0d1117;
-  color: #c9d1d9;
+  background: var(--bg);
+  color: var(--text);
   margin: 0;
   padding: 20px;
 }
 
 .container {
-  max-width: 900px;
+  max-width: 1100px;
   margin: auto;
 }
 
-h1 {
+/* ===== Layout: main + right sidebar ===== */
+.layout{
+  display:flex;
+  gap:18px;
+  align-items:flex-start;
+}
+
+.main{
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar{
+  width: 220px;                 /* <- это тот “красный квадратик” по ширине */
+  position: sticky;
+  top: 20px;
+  align-self:flex-start;
+}
+
+.side-card{
+  background: var(--panel);
+  border: 1px solid rgba(48,54,61,0.35);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.side-title{
+  font-size: 13px;
+  opacity: 0.8;
+  margin: 0 0 10px 0;
+  letter-spacing: 0.2px;
+}
+
+.month-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  max-height: calc(100vh - 120px);
+  overflow:auto;
+  padding-right: 6px;
+}
+
+.month-btn{
+  width:100%;
+  text-align:left;
+  background: rgba(255,255,255,0.02);
+  color: var(--text);
+  border: 1px solid rgba(48,54,61,0.35);
+  border-radius: 10px;
+  padding: 10px 10px;
+  cursor:pointer;
+  font-size: 14px;
+}
+.month-btn:hover{ filter: brightness(1.08); }
+.month-btn.active{
+  border-color: rgba(46,160,67,0.6);
+  box-shadow: 0 0 0 2px rgba(46,160,67,0.15) inset;
+}
+
+/* ===== Header ===== */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
+h1 {
+  margin: 0;
+  font-size: 26px;
+  flex: 1;
+}
+
+button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+
 .progress {
-  background: #161b22;
-  border-radius: 6px;
+  background: var(--panel);
+  border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin: 12px 0 8px;
+  border: 1px solid rgba(48,54,61,0.25);
 }
-
 .progress-bar {
-  height: 20px;
-  background: #2ea043;
+  height: 18px;
+  background: var(--green);
   width: 0%;
-  transition: width 0.3s;
+  transition: width 0.2s;
 }
+.progress-text { margin: 6px 0 16px; opacity: 0.9; }
 
-.progress-text {
-  margin: 5px 0 20px;
-}
-
-/* ===== Календарь ===== */
-
+/* ===== Calendar ===== */
 .weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 8px;
   text-align: center;
   font-size: 13px;
   opacity: 0.8;
 }
-
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 18px;
 }
 
 .day {
   width: 100%;
   padding-top: 100%;
   position: relative;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
-  background: #161b22;
+  background: var(--panel);
+  border: 1px solid rgba(48,54,61,0.35);
 }
 
 .day.empty {
   background: transparent;
+  border: none;
   cursor: default;
 }
 
-.day[data-state="1"] { background: #2ea043; }
-.day[data-state="2"] { background: #13491e; }
+.day[data-state="1"] { background: var(--green); }
+.day[data-state="2"] { background: var(--green2); }
 
 .day span {
   position: absolute;
-  top: 4px;
-  left: 6px;
+  top: 6px;
+  left: 8px;
   font-size: 12px;
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
-/* ===== Заметки ===== */
-
+/* ===== Notes ===== */
 .notes {
-  background: #161b22;
-  padding: 15px;
-  border-radius: 6px;
+  background: var(--panel);
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(48,54,61,0.35);
 }
-
 .notes textarea {
   width: 100%;
   min-height: 120px;
   resize: none;
-  background: #0d1117;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
-  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 10px;
   font-family: Arial, sans-serif;
   font-size: 14px;
@@ -108,9 +193,22 @@ h1 {
   outline: none;
   overflow: hidden;
 }
+.notes textarea::placeholder { color: #8b949e; }
 
-.notes textarea::placeholder {
-  color: #8b949e;
+.footer-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.small { opacity:0.75; font-size:12px; margin-top:8px; }
+
+/* ===== Mobile: sidebar moves below ===== */
+@media (max-width: 860px){
+  .layout{ flex-direction: column; }
+  .sidebar{ width: 100%; position: static; }
+  .month-list{ flex-direction: row; flex-wrap: wrap; max-height: none; overflow: visible; }
+  .month-btn{ width: calc(50% - 6px); }
 }
 </style>
 </head>
@@ -118,111 +216,260 @@ h1 {
 <body>
 <div class="container">
 
-<h1>Январь 2026</h1>
+  <div class="layout">
+    <div class="main">
+      <div class="header">
+        <button id="prevBtn" title="Предыдущий месяц">◀</button>
+        <h1 id="title"></h1>
+        <button id="nextBtn" title="Следующий месяц">▶</button>
+        <button id="todayBtn" title="Перейти к текущему месяцу">Сегодня</button>
+      </div>
 
-<div class="progress">
-  <div class="progress-bar" id="progressBar"></div>
-</div>
-<div class="progress-text" id="progressText"></div>
+      <div class="progress">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-text" id="progressText"></div>
 
-<div class="weekdays">
-  <div>Пн</div><div>Вт</div><div>Ср</div>
-  <div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
-</div>
+      <div class="weekdays">
+        <div>Пн</div><div>Вт</div><div>Ср</div>
+        <div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+      </div>
 
-<div class="calendar" id="calendar"></div>
+      <div class="calendar" id="calendar"></div>
 
-<div class="notes">
-  <textarea id="notes" placeholder="Заметки, мысли, итоги месяца…"></textarea>
-</div>
+      <div class="notes">
+        <textarea id="notes" placeholder="Заметки, мысли, итоги месяца…"></textarea>
+
+        <div class="footer-actions">
+          <button id="exportBtn">Экспорт данных</button>
+          <button id="importBtn">Импорт данных</button>
+          <input id="importFile" type="file" accept="application/json" style="display:none" />
+        </div>
+
+        <div class="small">
+          Состояния дня: 0 → 1 → 2 → 0 (клик по дню).<br/>
+          Экспорт/импорт — перенос между устройствами без логина.
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar">
+      <div class="side-card">
+        <p class="side-title">МЕСЯЦЫ</p>
+        <div class="month-list" id="monthList"></div>
+      </div>
+    </aside>
+  </div>
 
 </div>
 
 <script>
-const year = 2026;
-const month = 0; // январь (0-based)
-const daysInMonth = 31;
+/** ===== Helpers ===== **/
+const MONTHS_RU = [
+  "Январь","Февраль","Март","Апрель","Май","Июнь",
+  "Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"
+];
 
-const calendar = document.getElementById("calendar");
+function daysInMonth(y, m) {
+  return new Date(y, m + 1, 0).getDate();
+}
+// Пн=0 ... Вс=6
+function firstWeekdayMonday0(y, m) {
+  return (new Date(y, m, 1).getDay() + 6) % 7;
+}
+function ymKey(y, m) {
+  return `survival:${y}-${String(m+1).padStart(2,'0')}`;
+}
+
+function loadMonthData(y, m) {
+  const raw = localStorage.getItem(ymKey(y, m));
+  return raw ? JSON.parse(raw) : { days: {}, notes: "" };
+}
+function saveMonthData(y, m, payload) {
+  localStorage.setItem(ymKey(y, m), JSON.stringify(payload));
+}
+
+/** ===== DOM ===== **/
+const calendarEl = document.getElementById("calendar");
+const titleEl = document.getElementById("title");
 const progressBar = document.getElementById("progressBar");
 const progressText = document.getElementById("progressText");
+const notesEl = document.getElementById("notes");
+const monthListEl = document.getElementById("monthList");
 
-let data = JSON.parse(localStorage.getItem("jan2026")) || {};
+/** ===== State ===== **/
+let current = { year: 2026, month: 0 };
+let monthPayload = loadMonthData(current.year, current.month);
 
-/* ===== Прогресс ===== */
+/** ===== Sidebar months ===== **/
+function renderMonthSidebar() {
+  monthListEl.innerHTML = "";
 
-function save() {
-  localStorage.setItem("jan2026", JSON.stringify(data));
+  for (let m = 0; m < 12; m++) {
+    const btn = document.createElement("button");
+    btn.className = "month-btn";
+    btn.textContent = MONTHS_RU[m];
+    btn.dataset.month = m;
+
+    if (m === current.month) btn.classList.add("active");
+
+    btn.onclick = () => {
+      current.month = m;
+      render();             // перерисовали календарь
+    };
+
+    monthListEl.appendChild(btn);
+  }
+}
+
+function updateSidebarActive() {
+  const buttons = monthListEl.querySelectorAll(".month-btn");
+  buttons.forEach(b => {
+    b.classList.toggle("active", Number(b.dataset.month) === current.month);
+  });
+}
+
+/** ===== Render ===== **/
+function updateProgress() {
+  const dim = daysInMonth(current.year, current.month);
+  const completed = Object.values(monthPayload.days).filter(v => Number(v) > 0).length;
+  const percent = Math.round((completed / dim) * 100);
+  progressBar.style.width = percent + "%";
+  progressText.textContent = `Минимум выполнен: ${completed} / ${dim} дней (${percent}%)`;
+}
+
+function autoResizeNotes() {
+  const scrollY = window.scrollY;
+  notesEl.style.height = "auto";
+  notesEl.style.height = notesEl.scrollHeight + "px";
+  window.scrollTo(0, scrollY);
+}
+
+function render() {
+  // title
+  titleEl.textContent = `${MONTHS_RU[current.month]} ${current.year}`;
+
+  // sidebar active
+  updateSidebarActive();
+
+  // load month
+  monthPayload = loadMonthData(current.year, current.month);
+
+  // notes
+  notesEl.value = monthPayload.notes || "";
+  autoResizeNotes();
+
+  // calendar
+  calendarEl.innerHTML = "";
+  const dim = daysInMonth(current.year, current.month);
+  const first = firstWeekdayMonday0(current.year, current.month);
+
+  for (let i = 0; i < first; i++) {
+    const empty = document.createElement("div");
+    empty.className = "day empty";
+    calendarEl.appendChild(empty);
+  }
+
+  for (let d = 1; d <= dim; d++) {
+    const day = document.createElement("div");
+    day.className = "day";
+    day.dataset.day = d;
+    day.dataset.state = monthPayload.days[d] || 0;
+
+    const label = document.createElement("span");
+    label.textContent = d;
+    day.appendChild(label);
+
+    day.onclick = () => {
+      let state = Number(day.dataset.state);
+      state = (state + 1) % 3;
+      day.dataset.state = state;
+      monthPayload.days[d] = state;
+      saveMonthData(current.year, current.month, monthPayload);
+      updateProgress();
+    };
+
+    calendarEl.appendChild(day);
+  }
+
   updateProgress();
 }
 
-function updateProgress() {
-  const completed = Object.values(data).filter(v => v > 0).length;
-  const percent = Math.round((completed / daysInMonth) * 100);
-  progressBar.style.width = percent + "%";
-  progressText.textContent =
-    `Минимум выполнен: ${completed} / ${daysInMonth} дней (${percent}%)`;
+/** ===== Navigation ===== **/
+function nextMonth() {
+  current.month++;
+  if (current.month > 11) { current.month = 0; current.year++; }
+  render();
+}
+function prevMonth() {
+  current.month--;
+  if (current.month < 0) { current.month = 11; current.year--; }
+  render();
+}
+function goToday() {
+  const now = new Date();
+  current.year = now.getFullYear();
+  current.month = now.getMonth();
+  render();
 }
 
-/* ===== Генерация календаря ===== */
+document.getElementById("nextBtn").onclick = nextMonth;
+document.getElementById("prevBtn").onclick = prevMonth;
+document.getElementById("todayBtn").onclick = goToday;
 
-// День недели 1 января (Пн = 0)
-const firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
-
-// Пустые ячейки до первого дня
-for (let i = 0; i < firstDay; i++) {
-  const empty = document.createElement("div");
-  empty.className = "day empty";
-  calendar.appendChild(empty);
-}
-
-// Дни месяца
-for (let i = 1; i <= daysInMonth; i++) {
-  const day = document.createElement("div");
-  day.className = "day";
-  day.dataset.day = i;
-  day.dataset.state = data[i] || 0;
-
-  const label = document.createElement("span");
-  label.textContent = i;
-  day.appendChild(label);
-
-  day.onclick = () => {
-    let state = Number(day.dataset.state);
-    state = (state + 1) % 3;
-    day.dataset.state = state;
-    data[i] = state;
-    save();
-  };
-
-  calendar.appendChild(day);
-}
-
-updateProgress();
-
-/* ===== Заметки (фикс Enter-рывка) ===== */
-
-const notes = document.getElementById("notes");
-notes.value = localStorage.getItem("jan2026_notes") || "";
-
-function autoResize() {
-  const scrollY = window.scrollY; // сохраняем позицию скролла
-
-  notes.style.height = "auto";
-  notes.style.height = notes.scrollHeight + "px";
-
-  window.scrollTo(0, scrollY); // возвращаем обратно
-}
-
-notes.addEventListener("input", () => {
-  localStorage.setItem("jan2026_notes", notes.value);
-  autoResize();
+/** ===== Notes ===== **/
+notesEl.addEventListener("input", () => {
+  monthPayload.notes = notesEl.value;
+  saveMonthData(current.year, current.month, monthPayload);
+  autoResizeNotes();
 });
 
-// первичная подгонка высоты
-autoResize();
+/** ===== Export / Import ===== **/
+document.getElementById("exportBtn").onclick = () => {
+  const dump = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith("survival:")) dump[k] = localStorage.getItem(k);
+  }
+  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "survival-calendar-backup.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const importFile = document.getElementById("importFile");
+document.getElementById("importBtn").onclick = () => importFile.click();
+
+importFile.addEventListener("change", async () => {
+  const file = importFile.files?.[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const dump = JSON.parse(text);
+
+    for (const [k, v] of Object.entries(dump)) {
+      if (k.startsWith("survival:") && typeof v === "string") {
+        localStorage.setItem(k, v);
+      }
+    }
+    render();
+    alert("Импорт завершён ✅");
+  } catch (e) {
+    alert("Ошибка импорта: файл не похож на backup.json");
+  } finally {
+    importFile.value = "";
+  }
+});
+
+/** старт **/
+renderMonthSidebar(); // рисуем “месяцы” один раз
+render();             // рисуем текущий месяц
 </script>
 
 </body>
 </html>
-```
