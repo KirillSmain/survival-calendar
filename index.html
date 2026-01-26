@@ -267,16 +267,16 @@ button:hover { filter: brightness(1.1); }
   opacity: 0.6;
   padding-top: 2px;
 }
-.timeline-hours span { display: block; height: 7.06px; }
+.timeline-hours span { display: block; height: 5px; }
 .timeline-track {
   flex: 1;
   position: relative;
   background: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent 6px,
-    rgba(48,54,61,0.25) 6px,
-    rgba(48,54,61,0.25) 7px
+    transparent 4px,
+    rgba(48,54,61,0.25) 4px,
+    rgba(48,54,61,0.25) 5px
   );
 }
 .timeline-block {
@@ -301,22 +301,27 @@ button:hover { filter: brightness(1.1); }
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 10px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .task-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
 .task-row:last-child { margin-bottom: 0; }
-.task-time { display: flex; gap: 4px; align-items: center; }
+.task-time { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 .task-time input {
-  width: 70px;
+  width: 58px;
   padding: 6px 8px;
   font-size: 13px;
   background: var(--panel);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
+  box-sizing: border-box;
 }
-.task-theme { flex: 1; min-width: 120px; }
+.task-theme { flex: 1; min-width: 0; max-width: 100%; }
 .task-theme input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 6px 10px;
   font-size: 14px;
   background: var(--panel);
@@ -324,8 +329,11 @@ button:hover { filter: brightness(1.1); }
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+.task-desc { min-width: 0; max-width: 100%; }
 .task-desc textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 56px;
   resize: vertical;
   padding: 8px 10px;
@@ -492,6 +500,19 @@ function dateLabel(y, m, d) {
 function escapeAttr(s) {
   return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+function time24(s) {
+  if (!s || !/^\d{1,2}:\d{2}$/.test(String(s).trim())) return "";
+  var p = String(s).trim().split(":").map(function(x) { return parseInt(x, 10) || 0; });
+  var h = Math.max(0, Math.min(23, p[0]));
+  var m = Math.max(0, Math.min(59, p[1]));
+  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+}
+
+// #region agent log
+function _log(location, message, data, hypothesisId) {
+  fetch("http://127.0.0.1:7242/ingest/61bcb47e-495f-4d5a-86ef-305814f0e917", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location, message, data: data || {}, timestamp: Date.now(), sessionId: "debug-session", hypothesisId }) }).catch(function() {});
+}
+// #endregion
 
 /** ===== DOM ===== **/
 const calendarEl = document.getElementById("calendar");
@@ -558,6 +579,9 @@ function render() {
 
   // load month
   monthPayload = loadMonthData(current.year, current.month);
+  // #region agent log
+  _log("index.html:render:afterLoad", "monthPayload after load", { ym: current.year + "-" + current.month, dayTasksKeys: Object.keys(monthPayload.dayTasks || {}), sample: monthPayload.dayTasks ? Object.entries(monthPayload.dayTasks).slice(0, 3).map(function(kv) { return { k: kv[0], kType: typeof kv[0], len: (kv[1] && kv[1].length) || 0, firstTheme: (kv[1] && kv[1][0] && kv[1][0].theme) || null }; }) : [] }, "H4");
+  // #endregion
 
   // notes
   notesEl.value = monthPayload.notes || "";
@@ -584,14 +608,18 @@ function render() {
     label.textContent = d;
     day.appendChild(label);
 
-    const tasks = monthPayload.dayTasks[d] || [];
+    const tasks = monthPayload.dayTasks[d] || monthPayload.dayTasks[String(d)] || [];
     if (tasks.length > 0) day.classList.add("has-tasks");
 
     const themeSpan = document.createElement("span");
     themeSpan.className = "day-theme";
-    if (tasks.length === 1 && tasks[0].theme) themeSpan.textContent = tasks[0].theme;
-    else if (tasks.length > 1) themeSpan.textContent = `• ${tasks.length}`;
+    var themeDisplay = "";
+    if (tasks.length === 1 && tasks[0].theme) { themeDisplay = tasks[0].theme; themeSpan.textContent = tasks[0].theme; }
+    else if (tasks.length > 1) { themeDisplay = "• " + tasks.length; themeSpan.textContent = "• " + tasks.length; }
     day.appendChild(themeSpan);
+    // #region agent log
+    if (tasks.length > 0) _log("index.html:render:dayCell", "day cell with tasks", { day: d, dType: typeof d, tasksLen: tasks.length, firstTheme: (tasks[0] && tasks[0].theme) || null, themeDisplay: themeDisplay, hasThemeSpan: !!themeSpan.parentNode }, "H1");
+    // #endregion
 
     const noteBtn = document.createElement("button");
     noteBtn.type = "button";
@@ -724,18 +752,24 @@ document.addEventListener("keydown", (e) => {
 });
 
 function getDayTasks() {
-  const list = monthPayload.dayTasks[modalDay.day] || [];
-  return Array.isArray(list) ? list : [];
+  const byNum = monthPayload.dayTasks[modalDay.day];
+  const byStr = monthPayload.dayTasks[String(modalDay.day)];
+  return Array.isArray(byNum) ? byNum : Array.isArray(byStr) ? byStr : [];
 }
 
 function setDayTasks(list) {
-  monthPayload.dayTasks[modalDay.day] = list;
+  var k = String(modalDay.day);
+  if (!monthPayload.dayTasks) monthPayload.dayTasks = {};
+  monthPayload.dayTasks[k] = list;
   saveMonthData(modalDay.year, modalDay.month, monthPayload);
+  // #region agent log
+  _log("index.html:setDayTasks", "after save", { modalDay: modalDay, key: k, listLen: list.length, first: list[0] || null, dayTasksKeys: Object.keys(monthPayload.dayTasks || {}) }, "H3");
+  // #endregion
   renderTimeline();
 }
 
 function renderTimeline() {
-  const H_START = 6, H_END = 22;
+  const H_START = 0, H_END = 23;
   timelineHours.innerHTML = "";
   for (let h = H_START; h <= H_END; h++) {
     const sp = document.createElement("span");
@@ -743,7 +777,7 @@ function renderTimeline() {
     timelineHours.appendChild(sp);
   }
   const totalMin = (H_END - H_START + 1) * 60;
-  const tasks = getDayTasks().filter(t => t.startTime && t.endTime);
+  const tasks = getDayTasks().filter(function(t) { return time24(t.startTime) && time24(t.endTime); });
   timelineTrack.innerHTML = "";
   for (const t of tasks) {
     const parse = (s) => {
@@ -771,11 +805,13 @@ function renderDayTasks() {
   tasks.forEach((t, i) => {
     const card = document.createElement("div");
     card.className = "task-card";
+    const startVal = time24(t.startTime) || "";
+    const endVal = time24(t.endTime) || "";
     card.innerHTML = `
       <div class="task-row">
         <div class="task-time">
-          <input type="time" value="${escapeAttr(t.startTime)}" data-i="${i}" data-field="startTime" placeholder="Начало" />
-          <input type="time" value="${escapeAttr(t.endTime)}" data-i="${i}" data-field="endTime" placeholder="Конец" />
+          <input type="text" inputmode="numeric" value="${escapeAttr(startVal)}" data-i="${i}" data-field="startTime" placeholder="00:00" title="ЧЧ:ММ (24ч)" />
+          <input type="text" inputmode="numeric" value="${escapeAttr(endVal)}" data-i="${i}" data-field="endTime" placeholder="23:59" title="ЧЧ:ММ (24ч)" />
         </div>
         <div class="task-theme">
           <input type="text" value="${escapeAttr(t.theme)}" data-i="${i}" data-field="theme" placeholder="Тема (отображается на дне)" />
@@ -809,7 +845,9 @@ function applyTaskEdit() {
   const field = el.dataset.field;
   const list = getDayTasks();
   if (!list[i]) return;
-  list[i][field] = el.value.trim();
+  var v = el.value.trim();
+  if (field === "startTime" || field === "endTime") v = time24(v);
+  list[i][field] = v;
   setDayTasks(list);
 }
 
