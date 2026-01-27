@@ -197,12 +197,14 @@ button:hover { filter: brightness(1.1); }
   position: absolute;
   bottom: 5px;
   left: 6px;
-  right: 22px;
+  right: 6px;
   font-size: 9px;
+  line-height: 1.2;
   opacity: 0.9;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
+  display: block;
+  max-height: 3.6em;
   pointer-events: none;
 }
 
@@ -255,19 +257,19 @@ button:hover { filter: brightness(1.1); }
 }
 .timeline-title { font-size: 12px; opacity: 0.8; margin: 0 0 8px 0; }
 .timeline {
-  height: 120px;
+  height: 312px;
   position: relative;
   display: flex;
 }
 .timeline-hours {
   width: 36px;
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text);
   opacity: 0.6;
-  padding-top: 2px;
+  padding-top: 0;
 }
-.timeline-hours span { display: block; height: 5px; }
+.timeline-hours span { display: block; height: 13px; line-height: 13px; }
 .timeline-track {
   flex: 1;
   position: relative;
@@ -507,6 +509,44 @@ function time24(s) {
   var m = Math.max(0, Math.min(59, p[1]));
   return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
 }
+function normalizeTimeInput(raw, allowPartial) {
+  var s = String(raw || "").trim();
+  if (!s) return "";
+  var hasColon = s.indexOf(":") !== -1;
+  var h, m;
+  if (hasColon) {
+    var parts = s.split(":");
+    if (parts.length !== 2) return allowPartial ? null : "";
+    if (allowPartial && (parts[0] === "" || parts[1] === "")) return null;
+    if (!/^\d{1,2}$/.test(parts[0]) || !/^\d{1,2}$/.test(parts[1])) return allowPartial ? null : "";
+    h = parseInt(parts[0], 10);
+    m = parseInt(parts[1], 10);
+  } else {
+    if (!/^\d{1,4}$/.test(s)) return allowPartial ? null : "";
+    if (allowPartial && s.length < 3) return null;
+    if (s.length <= 2) {
+      h = parseInt(s, 10);
+      m = 0;
+    } else {
+      h = parseInt(s.slice(0, -2), 10);
+      m = parseInt(s.slice(-2), 10);
+    }
+  }
+  if (Number.isNaN(h) || Number.isNaN(m)) return allowPartial ? null : "";
+  if (h < 0 || h > 23 || m < 0 || m > 59) return allowPartial ? null : "";
+  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+}
+
+function buildDayTaskSummary(tasks, maxItems) {
+  if (!Array.isArray(tasks) || tasks.length === 0) return "";
+  var themes = tasks.map(t => (t && t.theme ? String(t.theme).trim() : "")).filter(Boolean);
+  var shown = themes.slice(0, maxItems);
+  var remaining = Math.max(0, tasks.length - shown.length);
+  var text = shown.join(" • ");
+  if (!text) return "Задач: " + tasks.length;
+  if (remaining > 0) text += " • +" + remaining;
+  return text;
+}
 
 // #region agent log
 function _log(location, message, data, hypothesisId) {
@@ -613,9 +653,11 @@ function render() {
 
     const themeSpan = document.createElement("span");
     themeSpan.className = "day-theme";
-    var themeDisplay = "";
-    if (tasks.length === 1 && tasks[0].theme) { themeDisplay = tasks[0].theme; themeSpan.textContent = tasks[0].theme; }
-    else if (tasks.length > 1) { themeDisplay = "• " + tasks.length; themeSpan.textContent = "• " + tasks.length; }
+    var themeDisplay = buildDayTaskSummary(tasks, 3);
+    if (themeDisplay) {
+      themeSpan.textContent = themeDisplay;
+      themeSpan.title = themeDisplay;
+    }
     day.appendChild(themeSpan);
     // #region agent log
     if (tasks.length > 0) _log("index.html:render:dayCell", "day cell with tasks", { day: d, dType: typeof d, tasksLen: tasks.length, firstTheme: (tasks[0] && tasks[0].theme) || null, themeDisplay: themeDisplay, hasThemeSpan: !!themeSpan.parentNode }, "H1");
@@ -777,15 +819,19 @@ function renderTimeline() {
     timelineHours.appendChild(sp);
   }
   const totalMin = (H_END - H_START + 1) * 60;
-  const tasks = getDayTasks().filter(function(t) { return time24(t.startTime) && time24(t.endTime); });
+  const tasks = getDayTasks().map(function(t) {
+    var start = normalizeTimeInput(t.startTime);
+    var end = normalizeTimeInput(t.endTime);
+    return { src: t, start: start, end: end };
+  }).filter(function(t) { return t.start && t.end; });
   timelineTrack.innerHTML = "";
   for (const t of tasks) {
     const parse = (s) => {
       const [h, m] = (s || "0:00").split(":").map(x => parseInt(x, 10) || 0);
       return h * 60 + m;
     };
-    const startMin = parse(t.startTime) - H_START * 60;
-    const endMin = parse(t.endTime) - H_START * 60;
+    const startMin = parse(t.start) - H_START * 60;
+    const endMin = parse(t.end) - H_START * 60;
     const duration = Math.max(0, endMin - startMin);
     const top = Math.max(0, (startMin / totalMin) * 100);
     const height = Math.min(100 - top, (duration / totalMin) * 100);
@@ -793,8 +839,8 @@ function renderTimeline() {
     block.className = "timeline-block";
     block.style.top = top + "%";
     block.style.height = height + "%";
-    block.textContent = t.theme || "—";
-    block.title = t.description || "";
+    block.textContent = t.src.theme || "—";
+    block.title = t.src.description || t.src.desc || "";
     timelineTrack.appendChild(block);
   }
 }
@@ -805,8 +851,9 @@ function renderDayTasks() {
   tasks.forEach((t, i) => {
     const card = document.createElement("div");
     card.className = "task-card";
-    const startVal = time24(t.startTime) || "";
-    const endVal = time24(t.endTime) || "";
+    const startVal = normalizeTimeInput(t.startTime) || "";
+    const endVal = normalizeTimeInput(t.endTime) || "";
+    const descVal = t.description || t.desc || "";
     card.innerHTML = `
       <div class="task-row">
         <div class="task-time">
@@ -818,7 +865,7 @@ function renderDayTasks() {
         </div>
       </div>
       <div class="task-desc">
-        <textarea data-i="${i}" data-field="description" placeholder="Описание задачи">${escapeAttr(t.description)}</textarea>
+        <textarea data-i="${i}" data-field="description" placeholder="Описание задачи">${escapeAttr(descVal)}</textarea>
       </div>
       <div class="task-actions">
         <button type="button" class="task-delete" data-i="${i}">Удалить</button>
@@ -829,6 +876,9 @@ function renderDayTasks() {
   dayTasksContainer.querySelectorAll("input, textarea").forEach(el => {
     el.addEventListener("input", applyTaskEdit);
     el.addEventListener("change", applyTaskEdit);
+    if (el.dataset.field === "startTime" || el.dataset.field === "endTime") {
+      el.addEventListener("blur", applyTaskEdit);
+    }
   });
   dayTasksContainer.querySelectorAll(".task-delete").forEach(btn => {
     btn.onclick = () => {
@@ -839,14 +889,23 @@ function renderDayTasks() {
   });
 }
 
-function applyTaskEdit() {
-  const el = this;
+function applyTaskEdit(e) {
+  const el = e.target || this;
   const i = Number(el.dataset.i);
   const field = el.dataset.field;
   const list = getDayTasks();
   if (!list[i]) return;
   var v = el.value.trim();
-  if (field === "startTime" || field === "endTime") v = time24(v);
+  if (field === "startTime" || field === "endTime") {
+    var allowPartial = e && e.type === "input";
+    var normalized = normalizeTimeInput(v, allowPartial);
+    if (normalized === null) return;
+    v = normalized;
+    if (!allowPartial) el.value = v;
+    if (allowPartial && normalized && normalized.length === 5 && el.value !== normalized) {
+      el.value = normalized;
+    }
+  }
   list[i][field] = v;
   setDayTasks(list);
 }
