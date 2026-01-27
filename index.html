@@ -14,6 +14,10 @@
   --border:#30363d;
   --green:#2ea043;
   --green2:#13491e;
+  --accent:#58a6ff;
+  --accent-purple:#a371f7;
+  --accent-hover:rgba(163,113,247,0.18);
+  --accent-border:rgba(163,113,247,0.45);
 }
 
 body {
@@ -201,12 +205,19 @@ button:hover { filter: brightness(1.1); }
   font-size: 9px;
   line-height: 1.2;
   opacity: 0.9;
-  white-space: normal;
   overflow: hidden;
-  display: block;
-  max-height: 3.6em;
-  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 4.8em;
 }
+.day-theme-line{
+  display:block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.day-theme-more{ opacity: 0.75; }
 
 /* ===== Modal: день — заметки ===== */
 .modal-overlay {
@@ -283,17 +294,43 @@ button:hover { filter: brightness(1.1); }
 }
 .timeline-block {
   position: absolute;
-  left: 2px;
-  right: 2px;
-  border-radius: 4px;
-  background: var(--green);
-  opacity: 0.85;
+  left: 4px;
+  right: 4px;
+  border-radius: 6px;
+  background: var(--panel);
+  border: 1px solid rgba(48,54,61,0.8);
+  border-left: 3px solid var(--accent);
+  color: var(--text);
   font-size: 10px;
-  padding: 2px 6px;
+  padding: 4px 6px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  user-select: text;
+}
+.timeline-block:hover,
+.timeline-block.is-active{
+  background: var(--accent-hover);
+  border-color: var(--accent-border);
+  border-left-color: var(--accent-purple);
+}
+.timeline-block.is-active{
+  box-shadow: 0 0 0 1px rgba(163,113,247,0.25);
+}
+.timeline-theme{
+  font-weight: 600;
+  font-size: 10px;
   white-space: nowrap;
+  overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none;
+}
+.timeline-desc{
+  font-size: 9px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tasks-title { font-size: 12px; opacity: 0.8; margin: 0 0 10px 0; }
@@ -310,7 +347,7 @@ button:hover { filter: brightness(1.1); }
 .task-row:last-child { margin-bottom: 0; }
 .task-time { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
 .task-time input {
-  width: 58px;
+  width: 96px;
   padding: 6px 8px;
   font-size: 13px;
   background: var(--panel);
@@ -318,6 +355,7 @@ button:hover { filter: brightness(1.1); }
   border: 1px solid var(--border);
   border-radius: 8px;
   box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
 }
 .task-theme { flex: 1; min-width: 0; max-width: 100%; }
 .task-theme input {
@@ -488,7 +526,9 @@ function loadMonthData(y, m) {
   const base = { days: {}, notes: "", dayTasks: {} };
   if (!raw) return base;
   const parsed = JSON.parse(raw);
-  return { ...base, ...parsed, dayTasks: parsed.dayTasks || {} };
+  const merged = { ...base, ...parsed, dayTasks: parsed.dayTasks || {} };
+  if (normalizeMonthTimes(merged)) saveMonthData(y, m, merged);
+  return merged;
 }
 function saveMonthData(y, m, payload) {
   localStorage.setItem(ymKey(y, m), JSON.stringify(payload));
@@ -502,28 +542,18 @@ function dateLabel(y, m, d) {
 function escapeAttr(s) {
   return String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
-function time24(s) {
-  if (!s || !/^\d{1,2}:\d{2}$/.test(String(s).trim())) return "";
-  var p = String(s).trim().split(":").map(function(x) { return parseInt(x, 10) || 0; });
-  var h = Math.max(0, Math.min(23, p[0]));
-  var m = Math.max(0, Math.min(59, p[1]));
-  return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-}
-function normalizeTimeInput(raw, allowPartial) {
+function normalizeTimeInput(raw) {
   var s = String(raw || "").trim();
   if (!s) return "";
-  var hasColon = s.indexOf(":") !== -1;
   var h, m;
-  if (hasColon) {
+  if (s.indexOf(":") !== -1) {
     var parts = s.split(":");
-    if (parts.length !== 2) return allowPartial ? null : "";
-    if (allowPartial && (parts[0] === "" || parts[1] === "")) return null;
-    if (!/^\d{1,2}$/.test(parts[0]) || !/^\d{1,2}$/.test(parts[1])) return allowPartial ? null : "";
+    if (parts.length !== 2) return "";
+    if (!/^\d{1,2}$/.test(parts[0]) || !/^\d{1,2}$/.test(parts[1])) return "";
     h = parseInt(parts[0], 10);
     m = parseInt(parts[1], 10);
   } else {
-    if (!/^\d{1,4}$/.test(s)) return allowPartial ? null : "";
-    if (allowPartial && s.length < 3) return null;
+    if (!/^\d{1,4}$/.test(s)) return "";
     if (s.length <= 2) {
       h = parseInt(s, 10);
       m = 0;
@@ -532,22 +562,57 @@ function normalizeTimeInput(raw, allowPartial) {
       m = parseInt(s.slice(-2), 10);
     }
   }
-  if (Number.isNaN(h) || Number.isNaN(m)) return allowPartial ? null : "";
-  if (h < 0 || h > 23 || m < 0 || m > 59) return allowPartial ? null : "";
+  if (Number.isNaN(h) || Number.isNaN(m)) return "";
+  if (h < 0 || h > 23 || m < 0 || m > 59) return "";
   return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
 }
-
-function buildDayTaskSummary(tasks, maxItems) {
-  if (!Array.isArray(tasks) || tasks.length === 0) return "";
-  var themes = tasks.map(t => (t && t.theme ? String(t.theme).trim() : "")).filter(Boolean);
-  var shown = themes.slice(0, maxItems);
-  var remaining = Math.max(0, tasks.length - shown.length);
-  var text = shown.join(" • ");
-  if (!text) return "Задач: " + tasks.length;
-  if (remaining > 0) text += " • +" + remaining;
-  return text;
+function normalizeTaskTimes(list) {
+  var changed = false;
+  if (!Array.isArray(list)) return changed;
+  list.forEach(function(task) {
+    if (!task || typeof task !== "object") return;
+    if (typeof task.description === "undefined" && task.desc) {
+      task.description = String(task.desc);
+      changed = true;
+    }
+    if ("startTime" in task) {
+      var nextStart = normalizeTimeInput(task.startTime);
+      if (nextStart !== (task.startTime || "")) {
+        task.startTime = nextStart;
+        changed = true;
+      }
+    }
+    if ("endTime" in task) {
+      var nextEnd = normalizeTimeInput(task.endTime);
+      if (nextEnd !== (task.endTime || "")) {
+        task.endTime = nextEnd;
+        changed = true;
+      }
+    }
+  });
+  return changed;
+}
+function normalizeMonthTimes(payload) {
+  var changed = false;
+  if (!payload || !payload.dayTasks || typeof payload.dayTasks !== "object") return changed;
+  Object.keys(payload.dayTasks).forEach(function(k) {
+    var list = payload.dayTasks[k];
+    if (normalizeTaskTimes(list)) changed = true;
+  });
+  return changed;
 }
 
+function buildDayTaskLines(tasks, maxItems) {
+  if (!Array.isArray(tasks) || tasks.length === 0) return [];
+  var themes = tasks.map(function(t) { return t && t.theme ? String(t.theme).trim() : ""; }).filter(Boolean);
+  var shown = themes.slice(0, maxItems);
+  var remaining = Math.max(0, tasks.length - shown.length);
+  if (shown.length === 0) {
+    return ["Задач: " + tasks.length];
+  }
+  if (remaining > 0) shown.push("+" + remaining);
+  return shown;
+}
 // #region agent log
 function _log(location, message, data, hypothesisId) {
   fetch("http://127.0.0.1:7242/ingest/61bcb47e-495f-4d5a-86ef-305814f0e917", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location, message, data: data || {}, timestamp: Date.now(), sessionId: "debug-session", hypothesisId }) }).catch(function() {});
@@ -653,14 +718,20 @@ function render() {
 
     const themeSpan = document.createElement("span");
     themeSpan.className = "day-theme";
-    var themeDisplay = buildDayTaskSummary(tasks, 3);
-    if (themeDisplay) {
-      themeSpan.textContent = themeDisplay;
-      themeSpan.title = themeDisplay;
+    var themeLines = buildDayTaskLines(tasks, 3);
+    if (themeLines.length) {
+      themeLines.forEach(function(line) {
+        const lineEl = document.createElement("span");
+        lineEl.className = "day-theme-line";
+        if (line.charAt(0) === "+") lineEl.classList.add("day-theme-more");
+        lineEl.textContent = line;
+        themeSpan.appendChild(lineEl);
+      });
+      themeSpan.title = themeLines.join("\n");
     }
     day.appendChild(themeSpan);
     // #region agent log
-    if (tasks.length > 0) _log("index.html:render:dayCell", "day cell with tasks", { day: d, dType: typeof d, tasksLen: tasks.length, firstTheme: (tasks[0] && tasks[0].theme) || null, themeDisplay: themeDisplay, hasThemeSpan: !!themeSpan.parentNode }, "H1");
+    if (tasks.length > 0) _log("index.html:render:dayCell", "day cell with tasks", { day: d, dType: typeof d, tasksLen: tasks.length, firstTheme: (tasks[0] && tasks[0].theme) || null, themeDisplay: themeLines.join(" | "), hasThemeSpan: !!themeSpan.parentNode }, "H1");
     // #endregion
 
     const noteBtn = document.createElement("button");
@@ -770,6 +841,16 @@ const dayTasksContainer = document.getElementById("dayTasksContainer");
 const addTaskBtn = document.getElementById("addTaskBtn");
 
 let modalDay = { year: 0, month: 0, day: 0 };
+let activeTaskIndex = null;
+
+function setActiveTaskIndex(i) {
+  if (typeof i === "number" && !Number.isNaN(i)) {
+    activeTaskIndex = i;
+  } else {
+    activeTaskIndex = null;
+  }
+  renderTimeline();
+}
 
 function openDayModal(y, m, d) {
   modalDay = { year: y, month: m, day: d };
@@ -791,6 +872,13 @@ dayModal.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && dayModal.classList.contains("open")) closeDayModal();
+});
+dayTasksContainer.addEventListener("focusin", (e) => {
+  const idx = e.target && e.target.dataset ? e.target.dataset.i : null;
+  if (idx !== null && idx !== undefined) setActiveTaskIndex(Number(idx));
+});
+dayTasksContainer.addEventListener("focusout", (e) => {
+  if (!dayTasksContainer.contains(e.relatedTarget)) setActiveTaskIndex(null);
 });
 
 function getDayTasks() {
@@ -819,10 +907,10 @@ function renderTimeline() {
     timelineHours.appendChild(sp);
   }
   const totalMin = (H_END - H_START + 1) * 60;
-  const tasks = getDayTasks().map(function(t) {
+  const tasks = getDayTasks().map(function(t, i) {
     var start = normalizeTimeInput(t.startTime);
     var end = normalizeTimeInput(t.endTime);
-    return { src: t, start: start, end: end };
+    return { src: t, start: start, end: end, idx: i };
   }).filter(function(t) { return t.start && t.end; });
   timelineTrack.innerHTML = "";
   for (const t of tasks) {
@@ -837,10 +925,22 @@ function renderTimeline() {
     const height = Math.min(100 - top, (duration / totalMin) * 100);
     const block = document.createElement("div");
     block.className = "timeline-block";
+    if (t.idx === activeTaskIndex) block.classList.add("is-active");
     block.style.top = top + "%";
     block.style.height = height + "%";
-    block.textContent = t.src.theme || "—";
-    block.title = t.src.description || t.src.desc || "";
+    const themeText = t.src && t.src.theme ? String(t.src.theme).trim() : "";
+    const descText = t.src && (t.src.description || t.src.desc) ? String(t.src.description || t.src.desc).trim() : "";
+    const themeEl = document.createElement("div");
+    themeEl.className = "timeline-theme";
+    themeEl.textContent = themeText || "—";
+    block.appendChild(themeEl);
+    if (descText) {
+      const descEl = document.createElement("div");
+      descEl.className = "timeline-desc";
+      descEl.textContent = descText;
+      block.appendChild(descEl);
+    }
+    block.title = descText || themeText || "";
     timelineTrack.appendChild(block);
   }
 }
@@ -857,8 +957,8 @@ function renderDayTasks() {
     card.innerHTML = `
       <div class="task-row">
         <div class="task-time">
-          <input type="text" inputmode="numeric" value="${escapeAttr(startVal)}" data-i="${i}" data-field="startTime" placeholder="00:00" title="ЧЧ:ММ (24ч)" />
-          <input type="text" inputmode="numeric" value="${escapeAttr(endVal)}" data-i="${i}" data-field="endTime" placeholder="23:59" title="ЧЧ:ММ (24ч)" />
+          <input type="time" step="60" value="${escapeAttr(startVal)}" data-i="${i}" data-field="startTime" title="ЧЧ:ММ (24ч)" />
+          <input type="time" step="60" value="${escapeAttr(endVal)}" data-i="${i}" data-field="endTime" title="ЧЧ:ММ (24ч)" />
         </div>
         <div class="task-theme">
           <input type="text" value="${escapeAttr(t.theme)}" data-i="${i}" data-field="theme" placeholder="Тема (отображается на дне)" />
@@ -874,11 +974,14 @@ function renderDayTasks() {
     dayTasksContainer.appendChild(card);
   });
   dayTasksContainer.querySelectorAll("input, textarea").forEach(el => {
+    const field = el.dataset.field;
+    if (field === "startTime" || field === "endTime") {
+      el.addEventListener("change", applyTaskEdit);
+      el.addEventListener("blur", applyTaskEdit);
+      return;
+    }
     el.addEventListener("input", applyTaskEdit);
     el.addEventListener("change", applyTaskEdit);
-    if (el.dataset.field === "startTime" || el.dataset.field === "endTime") {
-      el.addEventListener("blur", applyTaskEdit);
-    }
   });
   dayTasksContainer.querySelectorAll(".task-delete").forEach(btn => {
     btn.onclick = () => {
@@ -895,16 +998,12 @@ function applyTaskEdit(e) {
   const field = el.dataset.field;
   const list = getDayTasks();
   if (!list[i]) return;
-  var v = el.value.trim();
+  var v = el.value;
   if (field === "startTime" || field === "endTime") {
-    var allowPartial = e && e.type === "input";
-    var normalized = normalizeTimeInput(v, allowPartial);
-    if (normalized === null) return;
-    v = normalized;
-    if (!allowPartial) el.value = v;
-    if (allowPartial && normalized && normalized.length === 5 && el.value !== normalized) {
-      el.value = normalized;
-    }
+    v = normalizeTimeInput(v);
+    el.value = v;
+  } else {
+    v = v.trim();
   }
   list[i][field] = v;
   setDayTasks(list);
@@ -923,3 +1022,4 @@ render();             // рисуем текущий месяц
 
 </body>
 </html>
+
