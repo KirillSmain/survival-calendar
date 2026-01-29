@@ -205,7 +205,7 @@ button:focus-visible {
 
 .day-theme {
   position: absolute;
-  bottom: 5px;
+  top: 34px;
   left: 6px;
   right: 6px;
   font-size: 10px;
@@ -315,6 +315,7 @@ button:focus-visible {
   gap: 2px;
   user-select: text;
 }
+.timeline-block.is-overlap,
 .timeline-block:hover,
 .timeline-block.is-active{
   background: var(--accent-hover);
@@ -403,6 +404,7 @@ button:focus-visible {
 }
 .notes textarea {
   width: 100%;
+  box-sizing: border-box;
   min-height: 120px;
   resize: vertical;
   background: var(--bg);
@@ -942,25 +944,39 @@ function renderTimeline() {
     timelineHours.appendChild(sp);
   }
   const totalMin = (H_END - H_START + 1) * 60;
+  const parse = (s) => {
+    const [h, m] = (s || "0:00").split(":").map(x => parseInt(x, 10) || 0);
+    return h * 60 + m;
+  };
   const tasks = getDayTasks().map(function(t, i) {
     var start = normalizeTimeInput(t.startTime);
     var end = normalizeTimeInput(t.endTime);
     return { src: t, start: start, end: end, idx: i };
-  }).filter(function(t) { return t.start && t.end; });
+  }).filter(function(t) { return t.start && t.end; }).map(function(t) {
+    return Object.assign({}, t, { startAbsMin: parse(t.start), endAbsMin: parse(t.end) });
+  }).filter(function(t) { return t.endAbsMin > t.startAbsMin; });
+
+  const overlappedTaskIdx = new Set();
+  for (let i = 0; i < tasks.length; i++) {
+    for (let j = i + 1; j < tasks.length; j++) {
+      const a = tasks[i], b = tasks[j];
+      if (a.startAbsMin < b.endAbsMin && b.startAbsMin < a.endAbsMin) {
+        overlappedTaskIdx.add(a.idx);
+        overlappedTaskIdx.add(b.idx);
+      }
+    }
+  }
   timelineTrack.innerHTML = "";
   for (const t of tasks) {
-    const parse = (s) => {
-      const [h, m] = (s || "0:00").split(":").map(x => parseInt(x, 10) || 0);
-      return h * 60 + m;
-    };
-    const startMin = parse(t.start) - H_START * 60;
-    const endMin = parse(t.end) - H_START * 60;
+    const startMin = t.startAbsMin - H_START * 60;
+    const endMin = t.endAbsMin - H_START * 60;
     const duration = Math.max(0, endMin - startMin);
     const top = Math.max(0, (startMin / totalMin) * 100);
     const height = Math.min(100 - top, (duration / totalMin) * 100);
     const block = document.createElement("div");
     block.className = "timeline-block";
     if (t.idx === activeTaskIndex) block.classList.add("is-active");
+    if (overlappedTaskIdx.has(t.idx)) block.classList.add("is-overlap");
     block.style.top = top + "%";
     block.style.height = height + "%";
     const themeText = t.src && t.src.theme ? String(t.src.theme).trim() : "";
@@ -1010,6 +1026,7 @@ function renderDayTasks() {
   });
   dayTasksContainer.querySelectorAll("input, textarea").forEach(el => {
     const field = el.dataset.field;
+    el.addEventListener("keydown", handleTaskFieldKeydown);
     if (field === "startTime" || field === "endTime") {
       el.addEventListener("input", applyTimeDraftInput);
       el.addEventListener("change", applyTaskEdit);
@@ -1026,6 +1043,49 @@ function renderDayTasks() {
       renderDayTasks();
     };
   });
+}
+
+function focusNextTaskField(currentEl) {
+  if (!currentEl || !currentEl.dataset) return;
+  const field = currentEl.dataset.field;
+  if (!field) return;
+
+  const order = ["startTime", "endTime", "theme", "description"];
+  const idx = order.indexOf(field);
+  if (idx === -1) return;
+
+  const card = currentEl.closest(".task-card");
+  if (!card) return;
+
+  const nextField = order[idx + 1];
+  if (nextField) {
+    const nextEl = card.querySelector(`[data-field="${nextField}"]`);
+    if (nextEl) {
+      nextEl.focus();
+      if (nextEl.tagName === "INPUT" && typeof nextEl.select === "function") nextEl.select();
+      return;
+    }
+  }
+
+  const nextCard = card.nextElementSibling;
+  if (!nextCard) return;
+  const nextEl = nextCard.querySelector('[data-field="startTime"]');
+  if (!nextEl) return;
+  nextEl.focus();
+  if (typeof nextEl.select === "function") nextEl.select();
+}
+
+function handleTaskFieldKeydown(e) {
+  const el = e.target || this;
+  if (!el || !el.dataset) return;
+  if (e.key !== "Enter") return;
+
+  const field = el.dataset.field;
+  if (field === "description") return;
+
+  e.preventDefault();
+  applyTaskEdit({ target: el });
+  focusNextTaskField(el);
 }
 
 function applyTaskEdit(e) {
