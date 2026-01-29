@@ -173,7 +173,7 @@ button:focus-visible {
 .day[data-state="1"] { background: var(--green); }
 .day[data-state="2"] { background: var(--green2); }
 
-.day span {
+.day-label {
   position: absolute;
   top: 6px;
   left: 8px;
@@ -582,6 +582,23 @@ function normalizeTimeInput(raw) {
   if (h < 0 || h > 23 || m < 0 || m > 59) return "";
   return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
 }
+function formatTimeDraft(raw) {
+  var s = String(raw || "");
+  var hasColon = s.indexOf(":") !== -1;
+  var digits = s.replace(/[^\d]/g, "").slice(0, 4);
+  if (digits.length <= 2) return hasColon ? (digits + ":") : digits;
+  return digits.slice(0, 2) + ":" + digits.slice(2);
+}
+function applyTimeDraftInput(e) {
+  var el = e.target || this;
+  if (!el) return;
+  var next = formatTimeDraft(el.value);
+  if (el.value === next) return;
+  el.value = next;
+  try {
+    el.setSelectionRange(next.length, next.length);
+  } catch (_) {}
+}
 function normalizeTaskTimes(list) {
   var changed = false;
   if (!Array.isArray(list)) return changed;
@@ -727,6 +744,7 @@ function render() {
     day.dataset.state = monthPayload.days[d] || 0;
 
     const label = document.createElement("span");
+    label.className = "day-label";
     label.textContent = d;
     day.appendChild(label);
 
@@ -974,8 +992,8 @@ function renderDayTasks() {
     card.innerHTML = `
       <div class="task-row">
         <div class="task-time">
-          <input type="time" step="60" value="${escapeAttr(startVal)}" data-i="${i}" data-field="startTime" title="ЧЧ:ММ (24ч)" />
-          <input type="time" step="60" value="${escapeAttr(endVal)}" data-i="${i}" data-field="endTime" title="ЧЧ:ММ (24ч)" />
+          <input type="text" inputmode="numeric" autocomplete="off" placeholder="HH:MM" value="${escapeAttr(startVal)}" data-i="${i}" data-field="startTime" title="ЧЧ:ММ (24ч)" />
+          <input type="text" inputmode="numeric" autocomplete="off" placeholder="HH:MM" value="${escapeAttr(endVal)}" data-i="${i}" data-field="endTime" title="ЧЧ:ММ (24ч)" />
         </div>
         <div class="task-theme">
           <input type="text" value="${escapeAttr(t.theme)}" data-i="${i}" data-field="theme" placeholder="Тема (отображается на дне)" />
@@ -993,6 +1011,7 @@ function renderDayTasks() {
   dayTasksContainer.querySelectorAll("input, textarea").forEach(el => {
     const field = el.dataset.field;
     if (field === "startTime" || field === "endTime") {
+      el.addEventListener("input", applyTimeDraftInput);
       el.addEventListener("change", applyTaskEdit);
       el.addEventListener("blur", applyTaskEdit);
       return;
@@ -1017,6 +1036,7 @@ function applyTaskEdit(e) {
   if (!list[i]) return;
   var v = el.value;
   if (field === "startTime" || field === "endTime") {
+    if (typeof v === "string" && v.endsWith(":")) v = v.slice(0, -1);
     v = normalizeTimeInput(v);
     el.value = v;
   } else {
